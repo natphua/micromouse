@@ -8,7 +8,7 @@ void microMouseServer::studentAI()
     {
         turnRight();
     }
-    while (isWallForward()) //if there is a front wall, it turns back
+    while (isWallForward()) //if there is a front wall, turn back
     {
         turnLeft();
     }
