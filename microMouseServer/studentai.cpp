@@ -1,35 +1,25 @@
-
 #include "micromouseserver.h"
 
 void microMouseServer::studentAI()
 {
+    static std::string movements{}; //variable that will track past movements
     moveForward();
+    movements += "F";
+    if (movements.size() > 6) //making sure index is not out of range
+    {
+        if (movements.substr(movements.size() - 6) == "LFLFLF") //checking if past turns went around a 2x2 box
+        {
+            foundFinish();
+        }
+    }
     if (!isWallRight()) //follows right wall
     {
         turnRight();
+        movements += "R";
     }
     while (isWallForward()) //if there is a front wall, turn back
     {
         turnLeft();
+        movements += "L";
     }
 }
-
-/*
- * The following are the eight functions that you can call. Feel free to create your own fuctions as well.
- * Remember that any solution that calls moveForward more than once per call of studentAI() will have points deducted.
- *
- *The following functions return if there is a wall in their respective directions
- *bool isWallLeft();
- *bool isWallRight();
- *bool isWallForward();
- *
- *The following functions move the mouse. Move forward returns if the mouse was able to move forward and can be used for error checking
- *bool moveForward();
- *void turnLeft();
- *void turnRight();
- *
- * The following functions are called when you need to output something to the UI or when you have finished the maze
- * void foundFinish();
- * void printUI(const char *mesg);
-*/
-
