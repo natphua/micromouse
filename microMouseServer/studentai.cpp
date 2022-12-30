@@ -4,78 +4,160 @@
 using namespace std;
 
 
-bool isCellValid(int maze[20][20], bool visited[20][20], int row, int col)
+bool isCellValid(int visited[20][20], int row, int col)
 {
     // cell is out of bounds, already visited, or on a wall
-    if (row<0 || col<0 || row>20 || col>20 || visited[row][col] || maze[row][col] == '1')
+    if (row<0 || col<0 || row>20 || col>20 || visited[row][col] != 0)
     {
         return false;
     }
     return true;
 }
 
-void moveToCell(pair<int, int> current, pair<int, int> next)
-{
-    if (next.first > current.first)
-    {
-        moveForward(); // will fix function calls later
-    }
-    if (next.second > current.second)
-    {
-        turnRight();
-    }
-    else if (next.second < current.second)
-    {
-        turnLeft();
-    }
-}
-
 
 void microMouseServer::studentAI()
 {
-    static string movements{}; // tracking past movements
-    static int maze[20][20], row, col;
-    static bool visited[20][20]; // 2d array matching maze to record whether visited or not
+    static string movements, orientation;
+    static int row, col;
+    static int visited[20][20]; // 1 for visited, 0 for not visited, 9 for wall
     static stack <pair <int, int>> st;
     st.push({0, 0}); // starting point
+    static pair<int, int> last = {0, 0};
+    static int last_row{last.first};
+    static int last_col{last.second};
+    orientation = "forward";
 
     // setting all values in visited to false bc none have been visited yet
     for (auto i=0; i<20; i++)
     {
         for (auto j=0; j<20; j++)
         {
-            visited[i][j] = false;
+            visited[i][j] = 0;
         }
     }
 
-    while (st) // while stack is not empty
+    while (!st.empty()) // while stack is not empty
     {
+        if (movements.size() > 6) //making sure index is not out of range
+        {
+            if (movements.substr(movements.size() - 6) == "LFLFLF") //checking if past turns went around a 2x2 box
+            {
+                foundFinish();
+                break;
+            }
+        }
+
         pair<int, int> current = st.top;
         st.pop();
         row = current.first;
         col = current.second;
 
-        // marking surroundings and saving to maze record
-        if (isWallForward())
+        if (isCellValid(visited, row, col))
         {
-            // ISSUE: orientation of mouse can confuse location of walls using +1 -1 for right/left/forward
+            // moving to cell --> keep track of orientations to decide which way to move
+            // always move forward! i.e. if want to move backwards then just turn twice
+            if (orientation == "forward")
+            {
+                if (row < last_row)
+                {
+                    turnLeft();
+                    turnLeft();
+                    movements += "LL";
+                    orientation = "back";
+                }
+                if (col > last_col)
+                {
+                    turnRight();
+                    movements += "R";
+                    orientation = "right";
+                }
+                if (col < last_col)
+                {
+                    turnLeft();
+                    movements += "L";
+                    orientation = "left";
+                }
+            }
+            else if (orientation == "right")
+            {
+                if (row < last_row)
+                {
+                    turnRight();
+                    movements += "R";
+                    orientation = "back";
+                }
+                if (col < last_col)
+                {
+                    turnLeft();
+                    turnLeft();
+                    movements += "LL";
+                    orientation = "left";
+                }
+                if (row > last_row)
+                {
+                    turnLeft();
+                    movements += "L";
+                    orientation = "forward";
+                }
+            }
+            else if (orientation == "left")
+            {
+                if (row < last_row)
+                {
+                    turnLeft();
+                    movements += "L";
+                    orientation = "back";
+                }
+                if (col > last_col)
+                {
+                    turnLeft();
+                    turnLeft();
+                    movements += "LL";
+                    orientation = "right";
+                }
+                if (row > last_row)
+                {
+                    turnRight();
+                    movements += "R";
+                    orientation = "forward";
+                }
+            }
+            else if (orientation == "back")
+            {
+                if (row > last_row)
+                {
+                    turnLeft();
+                    turnLeft();
+                    movements += "LL";
+                    orientation = "forward";
+                }
+                if (col > last_col)
+                {
+                    turnLeft();
+                    movements += "L";
+                    orientation = "right";
+                }
+                if (col < last_col)
+                {
+                    turnRight();
+                    movements += "R";
+                    orientation = "left";
+                }
+            }
+            moveForward();
+            movements += "F";
         }
 
-
-        if (isCellValid(maze, visited, row, col))
-        {
-            continue;
-        }
-
-        moveToCell(current, next); // need to sort out diff between current and next with stack
-        visited[row][col] = true;
+        visited[row][col] = 1;
 
         st.push({row+1, col}); // go forward
-        st.push({row, col-1}); // go left
         st.push({row, col+1}); // go right
+        st.push({row, col-1}); // go left
+        st.push({row-1, col}); //go back
 
-        // unfinished; need to add backtracking, fix maze array, and sort out functions
-
+        last = current;
+        last_row = row;
+        last_col = col;
     }
 }
 
