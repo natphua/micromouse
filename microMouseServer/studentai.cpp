@@ -27,7 +27,7 @@ void microMouseServer::studentAI()
     static int last_col{last.second};
     orientation = "forward";
 
-    // setting all values in visited to false bc none have been visited yet
+    // setting all values in visited to 0 bc none have been visited yet; will add walls later
     for (auto i=0; i<20; i++)
     {
         for (auto j=0; j<20; j++)
@@ -55,7 +55,7 @@ void microMouseServer::studentAI()
         if (isCellValid(visited, row, col))
         {
             // moving to cell --> keep track of orientations to decide which way to move
-            // always move forward! i.e. if want to move backwards then just turn twice
+            // always moving forward! i.e. if want to move backwards then just turn twice
             if (orientation == "forward")
             {
                 if (row < last_row)
@@ -76,6 +76,18 @@ void microMouseServer::studentAI()
                     turnLeft();
                     movements += "L";
                     orientation = "left";
+                }
+                if (isWallForward())
+                {
+                    visited[row+1][col] = 9;
+                }
+                if (isWallRight())
+                {
+                    visited[row][col+1] = 9;
+                }
+                if (isWallLeft())
+                {
+                    visited[row][col-1] = 9;
                 }
             }
             else if (orientation == "right")
@@ -99,6 +111,18 @@ void microMouseServer::studentAI()
                     movements += "L";
                     orientation = "forward";
                 }
+                if (isWallForward())
+                {
+                    visited[row][col+1] = 9;
+                }
+                if (isWallRight())
+                {
+                    visited[row-1][col] = 9;
+                }
+                if (isWallLeft())
+                {
+                    visited[row+1][col] = 9;
+                }
             }
             else if (orientation == "left")
             {
@@ -120,6 +144,18 @@ void microMouseServer::studentAI()
                     turnRight();
                     movements += "R";
                     orientation = "forward";
+                }
+                if (isWallForward())
+                {
+                    visited[row][col-1] = 9;
+                }
+                if (isWallRight())
+                {
+                    visited[row+1][col] = 9;
+                }
+                if (isWallLeft())
+                {
+                    visited[row-1][col] = 9;
                 }
             }
             else if (orientation == "back")
@@ -146,14 +182,27 @@ void microMouseServer::studentAI()
             }
             moveForward();
             movements += "F";
+            if (isWallForward())
+            {
+                visited[row-1][col] = 9;
+            }
+            if (isWallRight())
+            {
+                visited[row][col-1] = 9;
+            }
+            if (isWallLeft())
+            {
+                visited[row][col+1] = 9;
+            }
         }
 
-        visited[row][col] = 1;
+        visited[row][col] = 1; // marking cell as visited
 
-        st.push({row+1, col}); // go forward
-        st.push({row, col+1}); // go right
-        st.push({row, col-1}); // go left
-        st.push({row-1, col}); //go back
+        // adding all directions to stack
+        st.push({row+1, col});
+        st.push({row, col+1});
+        st.push({row, col-1});
+        st.push({row-1, col});
 
         last = current;
         last_row = row;
