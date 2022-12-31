@@ -1,13 +1,31 @@
+// iterative depth first search
+
 #include "micromouseserver.h"
 #include <stack>
-#include <string>
+#include <vector>
 using namespace std;
 
 
-bool isCellValid(int visited[20][20], int row, int col)
+static int dir_moved{0};
+
+// 0 - forward, 1 - right, 2 - down, 3 - left
+static int orientation = 0;
+
+// [orientation][direction moving towards]
+// lookup table for movements w/ orientation
+// 0 - north, 1 - east, 2 - south, 3 - west
+static int xKey[4][4] = {{0, 1, 0, -1}, {1, 0, -1, 0}, {0, -1, 0, 1}, {-1, 0, 1, 0}};
+static int yKey[4][4] = {{1, 0, -1, 0}, {0, 1, 0, -1}, {-1, 0, 1, 0}, {0, -1, 0, 1}};
+
+// setting all values in visited to false bc none have been visited yet
+static int visited[20][20] = {{false}};
+
+
+// checks whether the mouse should move to that cell
+bool isCellValid(int vis[20][20], int xpos, int ypos)
 {
-    // cell is out of bounds, already visited, or on a wall
-    if (row<0 || col<0 || row>20 || col>20 || visited[row][col] != 0)
+    // if cell is out of bounds or already visited, return false
+    if (xpos<0 || ypos<0 || xpos>20 || ypos>20 || !vis[xpos][ypos])
     {
         return false;
     }
@@ -17,198 +35,80 @@ bool isCellValid(int visited[20][20], int row, int col)
 
 void microMouseServer::studentAI()
 {
-    static string movements, orientation;
-    static int row, col;
-    static int visited[20][20]; // 1 for visited, 0 for not visited, 9 for wall
-    static stack <pair <int, int>> st;
-    st.push({0, 0}); // starting point
-    static pair<int, int> last = {0, 0};
-    static int last_row{last.first};
-    static int last_col{last.second};
-    orientation = "forward";
-
-    // setting all values in visited to 0 bc none have been visited yet; will add walls later
-    for (auto i=0; i<20; i++)
-    {
-        for (auto j=0; j<20; j++)
-        {
-            visited[i][j] = 0;
-        }
-    }
+    static stack <pair<int, int>> st;
+    static int xpos, ypos, xnext, ynext;
+    static string moves;
+    static pair<int, int> last;
 
     while (!st.empty()) // while stack is not empty
     {
-        if (movements.size() > 6) //making sure index is not out of range
+        if (moves.size() > 6) //making sure index is not out of range
         {
-            if (movements.substr(movements.size() - 6) == "LFLFLF") //checking if past turns went around a 2x2 box
+            if (moves.substr(moves.size() - 6) == "RFRFRF") //checking if past turns went around a 2x2 box
             {
                 foundFinish();
                 break;
             }
         }
 
-        pair<int, int> current = st.top;
-        st.pop();
-        row = current.first;
-        col = current.second;
+        // current coords
+        xpos += xKey[orientation][dir_moved];
+        ypos += yKey[orientation][dir_moved];
 
-        if (isCellValid(visited, row, col))
+        // next path/turn to take
+        pair<int, int> next = st.top();
+        xnext = next.first;
+        ynext = next.second;
+
+
+        // moving to next cell
+        if (xnext < xpos)
         {
-            // moving to cell --> keep track of orientations to decide which way to move
-            // always moving forward! i.e. if want to move backwards then just turn twice
-            if (orientation == "forward")
-            {
-                if (row < last_row)
-                {
-                    turnLeft();
-                    turnLeft();
-                    movements += "LL";
-                    orientation = "back";
-                }
-                if (col > last_col)
-                {
-                    turnRight();
-                    movements += "R";
-                    orientation = "right";
-                }
-                if (col < last_col)
-                {
-                    turnLeft();
-                    movements += "L";
-                    orientation = "left";
-                }
-                if (isWallForward())
-                {
-                    visited[row+1][col] = 9;
-                }
-                if (isWallRight())
-                {
-                    visited[row][col+1] = 9;
-                }
-                if (isWallLeft())
-                {
-                    visited[row][col-1] = 9;
-                }
-            }
-            else if (orientation == "right")
-            {
-                if (row < last_row)
-                {
-                    turnRight();
-                    movements += "R";
-                    orientation = "back";
-                }
-                if (col < last_col)
-                {
-                    turnLeft();
-                    turnLeft();
-                    movements += "LL";
-                    orientation = "left";
-                }
-                if (row > last_row)
-                {
-                    turnLeft();
-                    movements += "L";
-                    orientation = "forward";
-                }
-                if (isWallForward())
-                {
-                    visited[row][col+1] = 9;
-                }
-                if (isWallRight())
-                {
-                    visited[row-1][col] = 9;
-                }
-                if (isWallLeft())
-                {
-                    visited[row+1][col] = 9;
-                }
-            }
-            else if (orientation == "left")
-            {
-                if (row < last_row)
-                {
-                    turnLeft();
-                    movements += "L";
-                    orientation = "back";
-                }
-                if (col > last_col)
-                {
-                    turnLeft();
-                    turnLeft();
-                    movements += "LL";
-                    orientation = "right";
-                }
-                if (row > last_row)
-                {
-                    turnRight();
-                    movements += "R";
-                    orientation = "forward";
-                }
-                if (isWallForward())
-                {
-                    visited[row][col-1] = 9;
-                }
-                if (isWallRight())
-                {
-                    visited[row+1][col] = 9;
-                }
-                if (isWallLeft())
-                {
-                    visited[row-1][col] = 9;
-                }
-            }
-            else if (orientation == "back")
-            {
-                if (row > last_row)
-                {
-                    turnLeft();
-                    turnLeft();
-                    movements += "LL";
-                    orientation = "forward";
-                }
-                if (col > last_col)
-                {
-                    turnLeft();
-                    movements += "L";
-                    orientation = "right";
-                }
-                if (col < last_col)
-                {
-                    turnRight();
-                    movements += "R";
-                    orientation = "left";
-                }
-            }
-            moveForward();
-            movements += "F";
-            if (isWallForward())
-            {
-                visited[row-1][col] = 9;
-            }
-            if (isWallRight())
-            {
-                visited[row][col-1] = 9;
-            }
-            if (isWallLeft())
-            {
-                visited[row][col+1] = 9;
-            }
+            // unfinished
+            // would use switch function to choose movements depending on orientation
+            // would also record turns in variable moves
+        }
+        if (ynext < ypos)
+        {
+
+        }
+        if (ynext < ypos)
+        {
+
         }
 
-        visited[row][col] = 1; // marking cell as visited
+        st.pop();
 
-        // adding all directions to stack
-        st.push({row+1, col});
-        st.push({row, col+1});
-        st.push({row, col-1});
-        st.push({row-1, col});
+        moveForward();
+        moves += "F";
 
-        last = current;
-        last_row = row;
-        last_col = col;
+        visited[xpos][ypos] = true; // marking cell as visited
+
+        // adding possible paths/turns to stack
+        if (!isWallRight() && isCellValid(visited, xKey[orientation][1], yKey[orientation][1]) ) // right
+        {
+            st.push({xKey[orientation][1], yKey[orientation][1]});
+        }
+        if (!isWallForward() && isCellValid(visited, xKey[orientation][0], yKey[orientation][0])) // up
+        {
+            st.push({xKey[orientation][0], yKey[orientation][0]});
+        }
+        if (!isWallLeft() && isCellValid(visited, xKey[orientation][3], yKey[orientation][3])) // left
+        {
+            st.push({xKey[orientation][3], yKey[orientation][3]});
+        }
+        else // down (backwards)
+        {
+            st.push({xKey[orientation][2], yKey[orientation][2]});
+        }
+
     }
 }
+
+
+
+
+
 
 
 
@@ -234,7 +134,7 @@ void microMouseServer::studentAI()
         turnRight();
         movements += "R";
     }
-    while (isWallForward()) //if there is a front wall, turn back
+    while (isWallForward()) //if there is a front wall, turn down
     {
         turnLeft();
         movements += "L";
